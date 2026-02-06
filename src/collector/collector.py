@@ -131,8 +131,10 @@ def fetch_rss(
 
         content_html = _extract_entry_html(entry)
         content_text = _html_to_text(content_html) if content_html else ""
-        if not content_text:
-            content_text = _fetch_article_text(link)
+        # Always try to fetch full article text; fall back to feed content if fetch fails.
+        full_text = _fetch_article_text(link)
+        if full_text:
+            content_text = full_text
 
         items.append(
             {

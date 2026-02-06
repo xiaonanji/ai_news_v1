@@ -1,6 +1,6 @@
 blogger:
   input_summary: null
-  output_dir: output/blogs
+  output_dir: /Users/seanji/Projects/blog_v2/posts
   llm:
     provider: openai
     model: gpt-4.1-mini

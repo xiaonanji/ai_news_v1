@@ -1,6 +1,6 @@
 analyzer:
   db_path: data/news.db
-  output_dir: output/news_summaries
+  output_dir: /Users/seanji/Projects/blog_v2/posts/weekly_news
   llm:
     provider: openai
     model: gpt-4.1-mini

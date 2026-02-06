@@ -32,7 +32,9 @@ def load_config(path: str, env_path: Optional[str] = None) -> AnalyzerConfig:
     )
 
 
-def run(config_path: str, env_path: Optional[str] = None) -> str:
+def run(
+    config_path: str, env_path: Optional[str] = None, *, skip_summarize: bool = False
+) -> str:
     cfg = load_config(config_path, env_path)
     conn = connect(cfg.db_path)
     ensure_schema(conn)
@@ -43,12 +45,13 @@ def run(config_path: str, env_path: Optional[str] = None) -> str:
     start, end = iso_week_bounds(now)
 
     rows = fetch_by_collected_range(conn, to_iso(start), to_iso(end))
-    client = LLMClient(cfg.llm)
+    client = None if skip_summarize else LLMClient(cfg.llm)
 
-    lines: list[str] = [f"# News Summary ({year:04d}-{week:02d})", ""]
+    title = f"News Summary ({year:04d}-{week:02d})"
+    lines: list[str] = [f"# {title}", ""]
     for row in rows:
         summary = row["summary"]
-        if not summary:
+        if not summary and not skip_summarize:
             log.info("Summarizing: %s", row["title"])
             summary = client.summarize_zh(row["content"])
             update_summary(conn, row["url"], summary)
@@ -60,13 +63,29 @@ def run(config_path: str, env_path: Optional[str] = None) -> str:
                 f"- Published: {row['published_date'] or 'unknown'}",
                 f"- Collected: {row['collected_date']}",
                 "- Summary:",
-                f"  {summary}",
+                f"  {summary or ''}",
                 "",
             ]
         )
 
     output_path = f"{cfg.output_dir}/news_{year:04d}_{week:02d}.md"
+    run_date = now.date().isoformat()
+    frontmatter = "\n".join(
+        [
+            "---",
+            f"title: {title}",
+            "description:",
+            f"date: {run_date}",
+            f"scheduled: {run_date}",
+            "tags:",
+            "  - AI",
+            "  - Jeremy",
+            "layout: layouts/post.njk",
+            "---",
+            "",
+        ]
+    )
     with open(output_path, "w", encoding="utf-8") as f:
-        f.write("\n".join(lines))
+        f.write(frontmatter + "\n".join(lines))
     log.info("Wrote summary file: %s", output_path)
     return output_path

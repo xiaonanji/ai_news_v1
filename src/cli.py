@@ -24,6 +24,11 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--summary-file", default=None)
     p.add_argument("--inspect-source", default=None)
     p.add_argument("--list-urls", action="store_true", help="List URLs from sources")
+    p.add_argument(
+        "--skip-summarize",
+        action="store_true",
+        help="Skip LLM summary generation and only write markdown output",
+    )
     p.add_argument("--log-level", default="INFO")
     return p.parse_args()
 
@@ -58,15 +63,19 @@ def main() -> None:
     validate_run_list(run_list)
     log.info("Run list: %s", ",".join(run_list))
 
+    analyzer_output: str | None = None
     if "collector" in run_list:
         log.info("Running collector")
         run_collector(args.config_collector, args.env)
     if "analyzer" in run_list:
         log.info("Running analyzer")
-        run_analyzer(args.config_analyzer, args.env)
+        analyzer_output = run_analyzer(
+            args.config_analyzer, args.env, skip_summarize=args.skip_summarize
+        )
     if "blogger" in run_list:
         log.info("Running blogger")
-        run_blogger(args.config_blogger, args.env, args.summary_file)
+        summary_file = args.summary_file or analyzer_output
+        run_blogger(args.config_blogger, args.env, summary_file)
 
 
 if __name__ == "__main__":

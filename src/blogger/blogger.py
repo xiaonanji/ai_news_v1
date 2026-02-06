@@ -53,7 +53,45 @@ def run(
 
     year, week = iso_year_week(now_utc())
     output_path = f"{cfg.output_dir}/blog_{year:04d}_{week:02d}.md"
+    blog_md_stripped = blog_md.lstrip()
+    if blog_md_stripped.startswith("---"):
+        lines = blog_md_stripped.splitlines()
+        end_idx = None
+        for i in range(1, len(lines)):
+            if lines[i].strip() == "---":
+                end_idx = i
+                break
+        if end_idx is not None:
+            blog_md = "\n".join(lines[end_idx + 1 :]).lstrip()
+    title = "Weekly AI News"
+    for line in blog_md.splitlines():
+        if line.startswith("# "):
+            title = line[2:].strip() or title
+            break
+        if line.strip():
+            break
+    run_date = now_utc().date().isoformat()
+    frontmatter = "\n".join(
+        [
+            "---",
+            f"title: {title}",
+            "description:",
+            f"date: {run_date}",
+            f"scheduled: {run_date}",
+            "tags:",
+            "  - AI",
+            "  - Jeremy",
+            "layout: layouts/post.njk",
+            "---",
+            "",
+        ]
+    )
+    reference = (
+        "\n\n---\n\n"
+        f"- [AI news summary — {year:04d}-{week:02d}]"
+        f"(../weekly_news/ai_news_{year:04d}-{week:02d})\n"
+    )
     with open(output_path, "w", encoding="utf-8") as f:
-        f.write(blog_md)
+        f.write(frontmatter + blog_md + reference)
     log.info("Wrote blog file: %s", output_path)
     return output_path
