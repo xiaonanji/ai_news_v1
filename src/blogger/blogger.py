@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 import logging
+from pathlib import Path
 from typing import Optional
 
 from src.core.config import LLMConfig, load_env, load_yaml
@@ -70,6 +71,12 @@ def run(
             break
         if line.strip():
             break
+    blog_lines = blog_md.splitlines()
+    if blog_lines and blog_lines[0].startswith("# "):
+        blog_lines = blog_lines[1:]
+        if blog_lines and not blog_lines[0].strip():
+            blog_lines = blog_lines[1:]
+        blog_md = "\n".join(blog_lines).lstrip()
     run_date = now_utc().date().isoformat()
     frontmatter = "\n".join(
         [
@@ -86,10 +93,11 @@ def run(
             "",
         ]
     )
+    summary_stem = Path(summary_path).stem
     reference = (
         "\n\n---\n\n"
         f"- [AI news summary — {year:04d}-{week:02d}]"
-        f"(../weekly_news/ai_news_{year:04d}-{week:02d})\n"
+        f"(../weekly_news/{summary_stem})\n"
     )
     with open(output_path, "w", encoding="utf-8") as f:
         f.write(frontmatter + blog_md + reference)

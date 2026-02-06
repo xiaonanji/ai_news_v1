@@ -48,7 +48,7 @@ def run(
     client = None if skip_summarize else LLMClient(cfg.llm)
 
     title = f"News Summary ({year:04d}-{week:02d})"
-    lines: list[str] = [f"# {title}", ""]
+    lines: list[str] = []
     for row in rows:
         summary = row["summary"]
         if not summary and not skip_summarize:
@@ -58,7 +58,7 @@ def run(
 
         lines.extend(
             [
-                f"## {row['title']}",
+                f"#### {row['title']}",
                 f"- URL: {row['url']}",
                 f"- Published: {row['published_date'] or 'unknown'}",
                 f"- Collected: {row['collected_date']}",
