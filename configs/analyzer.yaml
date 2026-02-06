@@ -1,0 +1,7 @@
+analyzer:
+  db_path: data/news.db
+  output_dir: output/news_summaries
+  llm:
+    provider: openai
+    model: gpt-4.1-mini
+    api_key_env: OPENAI_API_KEY

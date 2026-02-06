@@ -1,0 +1,10 @@
+requests
+feedparser
+beautifulsoup4
+lxml
+python-dotenv
+pyyaml
+markdown
+openai
+playwright
+pytest

@@ -1,0 +1,7 @@
+blogger:
+  input_summary: null
+  output_dir: output/blogs
+  llm:
+    provider: openai
+    model: gpt-4.1-mini
+    api_key_env: OPENAI_API_KEY

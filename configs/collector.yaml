@@ -1,0 +1,68 @@
+collector:
+  db_path: data/news.db
+  lookback_days: 30
+  max_items_per_source: 50
+  dedup_fields:
+  - url
+  - title
+  llm:
+    provider: openai
+    model: gpt-4.1-mini
+    api_key_env: OPENAI_API_KEY
+  sources:
+    - name: latent_space_api_archive
+      url: https://www.latent.space/api/v1/archive
+      type: api
+      howto:
+        api:
+          items_path: ''
+          url_field: canonical_url
+          title_field: title
+          date_field: post_date
+          content_field: description
+    # - name: latent_space_ainews
+    #   url: https://www.latent.space/archive?sort=new
+    #   type: html
+    #   howto: 
+    #     html:
+    #       list_selector: "div.archive-item"
+    #       title_selector: "h2.title"
+    #       date_selector: "time.date"
+    #       content_selector: "div.content"
+    - name: deeplearning-ai-the-batch-data-points
+      url: https://www.deeplearning.ai/the-batch/tag/data-points/
+      type: html
+      howto:
+        html:
+          list_selector: article div a[href^="/the-batch/"]
+          title_selector: h2, h3, a
+          date_selector: time
+          content_selector: section.article-content, div.post-content, article div.summary, div.content-wrapper
+    - "name": "deeplearning-ai-the-batch-research"
+      "url": "https://www.deeplearning.ai/the-batch/tag/research/"
+      "type": "html"
+      "howto":
+        "html":
+          "list_selector": "article a[href*=\"/the-batch/\"]"
+          "title_selector": "h2, h3, h4"
+          "date_selector": "time[datetime]"
+          "content_selector": "article p, article div.article-content"
+    - "name": "deeplearning-ai-the-batch-business"
+      "url": "https://www.deeplearning.ai/the-batch/tag/business/"
+      "type": "html"
+      "howto":
+        "html":
+          "list_selector": "article a[href*=\"/the-batch/\"]"
+          "title_selector": "h2, h3, h4"
+          "date_selector": "time[datetime]"
+          "content_selector": "article p, article div.article-content"
+    - "name": "deepmind-blog"
+      "url": "https://deepmind.google/blog/"
+      "type": "html"
+      "howto":
+        "html":
+          "list_selector": "article.post a"
+          "title_selector": "h2.post__title"
+          "date_selector": "time.post__date"
+          "content_selector": "div.post__content" 
+          

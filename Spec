@@ -1,0 +1,184 @@
+Plan to develop a new python addp. It contains 3 modules. The specification is as below:
+
+1. News collector:
+- Input: the News URL configuration file, which provides the list of URLs to collect news from. The collector goes through each URL, collect news from last 30 days (if publish date can be identified), or max 50 news (max items to collect can be configured).
+- Output: save all the news articles into a local database. Each article should has the following information:
+-- URL: this should be unique and used as a key to avoid dup collect
+-- Title: news title. Also can be used to avoid dup collect: if URL or Title matches, the news can be treated as dup and no need to re-save
+-- Published date: if populated, otherwise can be shown as unknown
+-- Collected date: this is the date when the news is saved to local database
+-- Content: only text from the news is saved
+-- Summary: this is a place holder. Collector doesn't populate any summary. It is the analyzer's job to populate the summary. When we create a news record, this field is created for placeholder
+- Configurable items:
+-- List of URLs (news sources), for each URL, a how-to section to indicate the type of URL and the approach to fetch news (see below for details)
+-- LLM provider
+-- LLM key (defined in a central .env file)
+-- LLM model name
+- Challenge: the key challenge of the collector is how to support news fetch from different types of news sources:
+-- RSS: easy, use standard RSS parser to collect news
+-- HTML news websites: can parse HTML to extract news
+-- JS driven websites: hard, cannot directly parse HTML and get news items.
+
+Create a small standalone tool within collector module. The module detail:
+- Input: user provide an URL, a news source
+- Output: use the LLM configured in collector module to parse the URL and provide the type of the news source and the best solution to collect the news. The output should be in the format that can be saved as the how-to configuration
+
+2. News analyzer:
+- Input: news records from local database. The analyzer should take news from current week (based on collected date), read through the text, summarize the key information in Chinese and save to the Summary field of the news record.
+- Output: analyzer generates a summary file named news_{{year}}_{{week}}.md, in markdown format. It contains all the news the analyzer analyzes. The file contains the following records:
+-- News title
+-- URL link
+-- Published date
+-- Collected date
+-- Summary
+- Configurable items:
+-- LLM provider
+-- LLM key (defined in a central .env file)
+-- LLM model name
+-- Summary output folder
+
+3. Blogger:
+- Input: the news_{{year}}_{{week}}.md that is created by the analyzer
+- Output: write a blog based on the news contents. Output to blog_{{year}}_{{week}}.md, in markdown format.
+- Configurable items:
+-- LLM provider
+-- LLM key (defined in a central .env file)
+-- LLM model name
+-- Blog output folder
+
+The three modules should be able to run in any combination:
+- Three modules can be run together in sequence: collector -> analyzer -> blogger. In this mode, analyzer always go to local database for news. Blogger always takes the output summary file from analyzer
+- Only run one module. If running blogger standalone, user needs to provide the summary file
+- Run collector and analyzer
+- Run analyzer and blogger. In this way, blogger will take output from analyzer. So no input needs to be specified by user
+- You cannot run collector and blogger
+
+Please plan to develop the three modules in separate components so the code can be clearly separated from each other. The three modules can share common requirements.txt, .env. Their configuration files can be separate.
+
+---
+
+Design notes (draft)
+
+Local DB schema (SQLite)
+
+Table: news
+- url TEXT PRIMARY KEY
+- title TEXT NOT NULL
+- published_date TEXT NULL
+- collected_date TEXT NOT NULL
+- content TEXT NOT NULL
+- summary TEXT NULL
+
+Indexes
+- unique(url)
+- index(title)
+
+Collector module design
+
+Workflow
+1. Load configs/collector.yaml and .env
+2. For each source in collector.sources:
+   - fetch list items
+   - expand to full articles
+   - extract title, published_date (if any), content text
+   - stop when lookback_days exceeded or max_items_per_source reached
+3. Deduplicate by url OR title before insert
+4. Insert into DB with summary = NULL and collected_date = now (ISO8601)
+
+Source types and handlers
+- rss: parse feed, follow item links, extract content and published date
+- html: use CSS selectors from howto.html to find list items and article fields
+- js: not directly parseable; use tool output to recommend strategy
+
+Source inspector tool (collector)
+Input: a URL
+Output: a YAML snippet that can be pasted into configs/collector.yaml
+Example output format:
+
+  - name: Example Source
+    url: https://example.com/news
+    type: rss|html|js
+    howto:
+      rss:
+        item_limit: 50
+        date_field: published|updated
+      html:
+        list_selector: "a.article-link"
+        title_selector: "h1"
+        date_selector: "time"
+        content_selector: "article"
+      js:
+        strategy: "browser_automation|api"
+        notes: "Use Playwright to render and scrape list + article pages."
+
+Analyzer module design
+
+Workflow
+1. Load configs/analyzer.yaml and .env
+2. Determine current ISO week and year based on now (collected_date)
+3. Query DB for rows where collected_date is within current ISO week
+4. For each row with empty summary:
+   - run LLM summarization in Chinese over content
+   - update summary in DB
+5. Emit markdown file news_{year}_{week}.md to output folder with all analyzed items
+
+Summary markdown format
+
+# News Summary (YYYY-WW)
+
+## {title}
+- URL: {url}
+- Published: {published_date or "unknown"}
+- Collected: {collected_date}
+- Summary:
+  {summary}
+
+Blogger module design
+
+Workflow
+1. Load configs/blogger.yaml and .env
+2. Determine input summary file:
+   - if provided, use it
+   - otherwise use the analyzer output for current ISO week
+3. Read the summary markdown and generate a blog in markdown
+4. Emit blog_{year}_{week}.md to output folder
+
+Blog markdown format (suggested)
+
+# Weekly AI News Blog (YYYY-WW)
+
+## Highlights
+- {bullet list}
+
+## Detailed Coverage
+### {title 1}
+{blog commentary derived from summary}
+
+### {title N}
+{blog commentary derived from summary}
+
+CLI / Runner design
+
+Command modes
+- collector
+- analyzer
+- blogger
+- pipeline
+
+Allowed combinations
+- pipeline: collector -> analyzer -> blogger
+- collector + analyzer
+- analyzer + blogger
+- single module runs
+
+Invalid
+- collector + blogger (no analyzer)
+
+Arguments
+- --config-collector, --config-analyzer, --config-blogger (optional)
+- --summary-file (for blogger standalone)
+- --run collector,analyzer,blogger (for combined runs)
+
+Behavior
+- If pipeline or analyzer+blogger: blogger input defaults to analyzer output for current week
+- If blogger standalone: require --summary-file
