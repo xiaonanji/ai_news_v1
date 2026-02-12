@@ -1,6 +1,13 @@
 blogger:
   input_summary: null
   output_dir: /Users/seanji/Projects/blog_v2/posts
+  markdown_instructions: |
+    ##: level 1 title
+    ###: level 2 title
+    ####: level 3 title
+    >: quotation
+    -: bullet points
+    Avoid using # markdown.
   llm:
     provider: openai
     model: gpt-4.1-mini

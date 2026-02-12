@@ -71,10 +71,16 @@ class LLMClient:
         input_text = f"URL:\n{url}\n\nCONTENT:\n{content}"
         return self._run(instructions, input_text)
 
-    def blog_from_summary(self, summary_md: str) -> str:
+    def blog_from_summary(
+        self, summary_md: str, markdown_instructions: str | None = None
+    ) -> str:
         instructions = (
             "Write a weekly blog post in markdown based on the provided news summary. "
             "Include a Highlights section (bulleted) and a Detailed Coverage section "
             "with short commentary per item. Use clear, professional Chinese."
         )
+        if markdown_instructions:
+            instructions = (
+                f"{instructions}\n\nFormatting rules:\n{markdown_instructions}"
+            )
         return self._run(instructions, summary_md)

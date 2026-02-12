@@ -14,6 +14,7 @@ from src.core.time_utils import iso_year_week, now_utc
 class BloggerConfig:
     input_summary: Optional[str]
     output_dir: str
+    markdown_instructions: Optional[str]
     llm: LLMConfig
 
 
@@ -24,6 +25,7 @@ def load_config(path: str, env_path: Optional[str] = None) -> BloggerConfig:
     return BloggerConfig(
         input_summary=raw.get("input_summary"),
         output_dir=raw["output_dir"],
+        markdown_instructions=raw.get("markdown_instructions"),
         llm=LLMConfig(
             provider=llm["provider"],
             model=llm["model"],
@@ -50,7 +52,7 @@ def run(
         summary_md = f.read()
 
     client = LLMClient(cfg.llm)
-    blog_md = client.blog_from_summary(summary_md)
+    blog_md = client.blog_from_summary(summary_md, cfg.markdown_instructions)
 
     year, week = iso_year_week(now_utc())
     output_path = f"{cfg.output_dir}/blog_{year:04d}_{week:02d}.md"
