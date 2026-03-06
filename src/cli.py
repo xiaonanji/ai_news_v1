@@ -29,6 +29,7 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="Skip LLM summary generation and only write markdown output",
     )
+    p.add_argument("--days", type=int, default=None, help="Analyze last N days instead of current ISO week")
     p.add_argument("--log-level", default="INFO")
     return p.parse_args()
 
@@ -70,7 +71,7 @@ def main() -> None:
     if "analyzer" in run_list:
         log.info("Running analyzer")
         analyzer_output = run_analyzer(
-            args.config_analyzer, args.env, skip_summarize=args.skip_summarize
+            args.config_analyzer, args.env, skip_summarize=args.skip_summarize, days=args.days
         )
     if "blogger" in run_list:
         log.info("Running blogger")

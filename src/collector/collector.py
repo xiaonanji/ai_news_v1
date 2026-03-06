@@ -66,6 +66,9 @@ def run(config_path: str, env_path: Optional[str] = None) -> None:
             raise ValueError(f"Unknown source type: {source_type}")
 
         for item in items:
+            if not item.get("content"):
+                log.warning("Skipping (no content): %s", item.get("title") or item.get("url"))
+                continue
             news = NewsItem(
                 url=item["url"],
                 title=item["title"],

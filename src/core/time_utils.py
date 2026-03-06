@@ -22,5 +22,11 @@ def iso_week_bounds(dt: datetime) -> tuple[datetime, datetime]:
     return start, end
 
 
+def rolling_bounds(dt: datetime, days: int) -> tuple[datetime, datetime]:
+    end = datetime(dt.year, dt.month, dt.day, tzinfo=dt.tzinfo) + timedelta(days=1)
+    start = end - timedelta(days=days)
+    return start, end
+
+
 def to_iso(dt: datetime) -> str:
     return dt.isoformat()

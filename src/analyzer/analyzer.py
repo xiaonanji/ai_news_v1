@@ -7,7 +7,7 @@ from typing import Optional
 from src.core.config import LLMConfig, load_env, load_yaml
 from src.core.db import connect, ensure_schema, fetch_by_collected_range, update_summary
 from src.core.llm import LLMClient
-from src.core.time_utils import iso_week_bounds, iso_year_week, now_utc, to_iso
+from src.core.time_utils import iso_week_bounds, iso_year_week, now_utc, rolling_bounds, to_iso
 
 
 @dataclass(frozen=True)
@@ -33,7 +33,11 @@ def load_config(path: str, env_path: Optional[str] = None) -> AnalyzerConfig:
 
 
 def run(
-    config_path: str, env_path: Optional[str] = None, *, skip_summarize: bool = False
+    config_path: str,
+    env_path: Optional[str] = None,
+    *,
+    skip_summarize: bool = False,
+    days: Optional[int] = None,
 ) -> str:
     cfg = load_config(config_path, env_path)
     conn = connect(cfg.db_path)
@@ -42,16 +46,21 @@ def run(
     log = logging.getLogger("analyzer")
     now = now_utc()
     year, week = iso_year_week(now)
-    start, end = iso_week_bounds(now)
+
+    if days is not None:
+        start, end = rolling_bounds(now, days)
+        title = f"News Summary (last {days} days)"
+    else:
+        start, end = iso_week_bounds(now)
+        title = f"News Summary ({year:04d}-{week:02d})"
 
     rows = fetch_by_collected_range(conn, to_iso(start), to_iso(end))
     client = None if skip_summarize else LLMClient(cfg.llm)
 
-    title = f"News Summary ({year:04d}-{week:02d})"
     lines: list[str] = []
     for row in rows:
         summary = row["summary"]
-        if not summary and not skip_summarize:
+        if not summary and not skip_summarize and row["content"]:
             log.info("Summarizing: %s", row["title"])
             summary = client.summarize_zh(row["content"])
             update_summary(conn, row["url"], summary)
